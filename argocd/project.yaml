@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: eventosu
+  namespace: argocd
+spec:
+  description: EventosU — GitOps (P8). Todo cambio al clúster pasa por aquí.
+  sourceRepos:
+    - "https://github.com/hersmd/eventosu-gitops.git"
+    - "https://github.com/hersmd/Practicas-SA-B-201704312.git"
+  destinations:
+    - namespace: sa-p5
+      server: https://kubernetes.default.svc
+    - namespace: sa-p5-dev
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: "*"
+    - group: apps
+      kind: "*"
+    - group: batch
+      kind: "*"
+    - group: autoscaling
+      kind: "*"
+    - group: policy
+      kind: "*"
+    - group: argoproj.io
+      kind: "*"
+    - group: bitnami.com
+      kind: SealedSecret

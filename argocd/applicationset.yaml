@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: eventosu-services
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          # 1) Un directorio por servicio dentro de apps/ en ESTE repo
+          #    (GitOps) — cada uno trae su values.yaml/image.yaml/
+          #    sealed-secret.yaml propios.
+          - git:
+              repoURL: https://github.com/hersmd/eventosu-gitops.git
+              revision: main
+              directories:
+                - path: apps/*
+          # 2) Ambientes — combina cada servicio con dev y prod
+          #    (matrix generator = producto cartesiano de ambos).
+          - list:
+              elements:
+                - env: dev
+                  namespace: sa-p5-dev
+                - env: prod
+                  namespace: sa-p5
+  template:
+    metadata:
+      name: "{{path.basename}}-{{env}}"
+      namespace: argocd
+    spec:
+      project: eventosu
+      sources:
+        # Fuente 1: el chart de Helm, definido en el repo de CÓDIGO
+        # (P8/charts/<servicio>) — la plantilla no cambia con cada
+        # deploy, solo con cambios de infraestructura del propio chart.
+        - repoURL: https://github.com/hersmd/Practicas-SA-B-201704312.git
+          targetRevision: main
+          path: "P8/charts/{{path.basename}}"
+          helm:
+            valueFiles:
+              - "values-{{env}}.yaml"
+              - "$values/apps/{{path.basename}}/image.yaml"
+            releaseName: "{{path.basename}}-{{env}}"
+        # Fuente 2: los VALORES, en ESTE repo (GitOps) — es lo único
+        # que el pipeline toca automáticamente (image.yaml, vía PR).
+        - repoURL: https://github.com/hersmd/eventosu-gitops.git
+          targetRevision: main
+          path: "apps/{{path.basename}}"
+          ref: values
+        # Fuente 3: el SealedSecret de ESE ambiente, aplicado como
+        # manifiesto crudo (no es un value de Helm) — kubeseal ya
+        # produce el YAML final, solo hay que sincronizarlo tal cual.
+        - repoURL: https://github.com/hersmd/eventosu-gitops.git
+          targetRevision: main
+          path: "apps/{{path.basename}}/sealed-secrets"
+          directory:
+            include: "sealed-secret-{{env}}.yaml"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=false # los namespaces los crea Terraform, no ArgoCD
