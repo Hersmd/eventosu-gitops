@@ -1,5 +1,2 @@
-# Este archivo lo actualiza AUTOMÁTICAMENTE el pipeline de CI/CD del
-# repo de código, vía Pull Request, en cada tag de versión (v1.2.3).
-# No lo edites a mano salvo para el bootstrap inicial.
 image:
-  tag: "0.0.0-placeholder"
+  tag: "1.0.12"
