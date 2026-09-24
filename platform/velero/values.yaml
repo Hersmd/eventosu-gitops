@@ -1,0 +1,59 @@
+# Velero - respaldos programados de sa-p5 (PostgreSQL y RabbitMQ incluidos).
+#
+# Destino:    bucket GCS FUERA del clúster (creado en terraform/foundation).
+# Volúmenes:  snapshots de disco persistente (GCE PD) vía plugin de GCP.
+# Identidad:  Workload Identity (sin llaves JSON, sin secretos en el repo).
+
+initContainers:
+  - name: velero-plugin-for-gcp
+    image: velero/velero-plugin-for-gcp:v1.11.0
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+credentials:
+  useSecret: false
+
+serviceAccount:
+  server:
+    create: true
+    name: velero
+    annotations:
+      iam.gke.io/gcp-service-account: velero-dr@eventosu-p6-201704312.iam.gserviceaccount.com
+
+configuration:
+  backupStorageLocation:
+    - name: default
+      provider: gcp
+      bucket: eventosu-p6-201704312-velero-backups
+      prefix: eventosu-cluster
+      default: true
+  volumeSnapshotLocation:
+    - name: default
+      provider: gcp
+      config:
+        project: eventosu-p6-201704312
+        snapshotLocation: us-central1
+
+snapshotsEnabled: true
+deployNodeAgent: false
+
+# Calendario y retención (declarados, no manuales).
+schedules:
+  eventosu-data:
+    disabled: false
+    schedule: "*/30 * * * *"        # cada 30 min  ->  RPO declarado: 30 min
+    useOwnerReferencesInBackup: false
+    template:
+      ttl: "72h0m0s"                # retención: 72 h (~144 respaldos)
+      includedNamespaces:
+        - sa-p5
+      # Los Secrets se recrean desde los SealedSecret del repo; no hace falta
+      # (ni conviene) dejar Secrets en claro dentro del bucket.
+      excludedResources:
+        - secrets
+      snapshotVolumes: true
+      storageLocation: default
+      volumeSnapshotLocations:
+        - default

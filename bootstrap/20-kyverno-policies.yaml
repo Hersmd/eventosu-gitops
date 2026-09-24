@@ -1,0 +1,25 @@
+# Las 4 políticas de P8 (latest, límites, no-root, firma de imágenes), tomadas
+# tal cual de P8/kyverno-policies: tras la reconstrucción siguen operando.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-policies
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/hersmd/Practicas-SA-B-201704312.git
+    targetRevision: main
+    path: P8/kyverno-policies
+    directory:
+      include: "*.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    # Los CRDs de Kyverno pueden tardar unos segundos tras el wave 0.
+    syncOptions: [SkipDryRunOnMissingResource=true, ServerSideApply=true]
+    retry: { limit: 8, backoff: { duration: 15s, factor: 2, maxDuration: 3m } }

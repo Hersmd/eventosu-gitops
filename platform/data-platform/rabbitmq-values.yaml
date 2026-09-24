@@ -1,0 +1,22 @@
+global:
+  security:
+    allowInsecureImages: true
+
+image:
+  registry: docker.io
+  repository: bitnamilegacy/rabbitmq
+
+fullnameOverride: sa-platform-rabbitmq
+
+auth:
+  username: eventosu
+  # Claves: rabbitmq-password, rabbitmq-erlang-cookie (SealedSecret).
+  existingPasswordSecret: sa-platform-rabbitmq
+  existingErlangSecret: sa-platform-rabbitmq
+
+persistence:
+  size: 1Gi
+
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits: { cpu: 500m, memory: 512Mi }

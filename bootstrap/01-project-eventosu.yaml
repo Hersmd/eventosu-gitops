@@ -1,10 +1,14 @@
+# Igual al de P8 (argocd/project.yaml), ahora versionado dentro del app-of-apps
+# para que el clúster reconstruido lo tenga sin pasos manuales.
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: eventosu
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 spec:
-  description: EventosU — GitOps (P8). Todo cambio al clúster pasa por aquí.
+  description: EventosU - GitOps (P8/P9). Todo cambio al clúster pasa por aquí.
   sourceRepos:
     - "https://github.com/hersmd/eventosu-gitops.git"
     - "https://github.com/hersmd/Practicas-SA-B-201704312.git"

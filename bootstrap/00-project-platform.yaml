@@ -1,0 +1,28 @@
+# AppProject de los componentes de PLATAFORMA (P9): controladores, políticas,
+# respaldos y datos. El proyecto "eventosu" (P8) sigue siendo el de los
+# microservicios, con permisos más estrechos.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Plataforma EventosU (P9) - instalada por el app-of-apps
+  sourceRepos:
+    - https://github.com/hersmd/eventosu-gitops.git
+    - https://github.com/hersmd/Practicas-SA-B-201704312.git
+    - https://argoproj.github.io/argo-helm
+    - https://kyverno.github.io/kyverno/
+    - https://vmware-tanzu.github.io/helm-charts
+    - https://charts.bitnami.com/bitnami
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

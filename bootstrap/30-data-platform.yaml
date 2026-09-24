@@ -1,0 +1,49 @@
+# PostgreSQL + RabbitMQ (los servicios CON ESTADO), ahora bajo GitOps.
+# En P7 se instalaban con `helm install` a mano y contraseñas en un archivo no
+# versionado: esa era una parte del sistema imposible de reconstruir sin el
+# autor. Aquí todo es declarativo; las contraseñas viajan como SealedSecret.
+#
+# releaseName = nombre de la Application, y fullnameOverride en los values
+# conserva los nombres de servicio de P7 (sa-platform-postgresql /
+# sa-platform-rabbitmq) que los microservicios ya usan.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: postgresql
+      targetRevision: "16.*"
+      helm:
+        releaseName: data-platform
+        valueFiles:
+          - $values/platform/data-platform/postgresql-values.yaml
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: rabbitmq
+      targetRevision: "15.*"
+      helm:
+        releaseName: data-platform
+        valueFiles:
+          - $values/platform/data-platform/rabbitmq-values.yaml
+    - repoURL: https://github.com/hersmd/eventosu-gitops.git
+      targetRevision: main
+      ref: values
+    # SealedSecrets de las contraseñas, ConfigMap de initdb y el hook de
+    # restauración (PreSync) que recupera los PVC desde Velero.
+    - repoURL: https://github.com/hersmd/eventosu-gitops.git
+      targetRevision: main
+      path: platform/data-platform/manifests
+      directory:
+        recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sa-p5
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=false] # los namespaces los crea Terraform
+    retry: { limit: 5, backoff: { duration: 20s, factor: 2, maxDuration: 5m } }

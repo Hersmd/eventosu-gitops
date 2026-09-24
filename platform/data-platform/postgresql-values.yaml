@@ -1,0 +1,35 @@
+# Bitnami PostgreSQL. Desde 2025 las imágenes viven en bitnamilegacy/
+# (mismo fix que P7: values-fix-bitnami.yaml).
+global:
+  security:
+    allowInsecureImages: true
+
+image:
+  registry: docker.io
+  repository: bitnamilegacy/postgresql
+
+# Conserva el nombre de servicio de P7: sa-platform-postgresql
+fullnameOverride: sa-platform-postgresql
+
+auth:
+  username: eventosu
+  database: usuarios_db
+  # Secret materializado desde SealedSecret (manifests/sealed-secrets/).
+  # Claves: postgres-password, password. NO hay contraseña en este archivo.
+  existingSecret: sa-platform-postgresql
+
+primary:
+  initdb:
+    scriptsConfigMap: sa-platform-postgres-initdb
+  persistence:
+    size: 1Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+  # Velero ejecuta CHECKPOINT antes del snapshot: reduce el trabajo de
+  # recuperación (WAL replay) al restaurar el disco.
+  podAnnotations:
+    pre.hook.backup.velero.io/container: postgresql
+    pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "PGPASSWORD=\"$POSTGRES_POSTGRES_PASSWORD\" psql -U postgres -c CHECKPOINT"]'
+    pre.hook.backup.velero.io/on-error: Continue
+    pre.hook.backup.velero.io/timeout: 60s

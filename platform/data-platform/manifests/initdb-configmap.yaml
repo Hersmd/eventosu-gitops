@@ -1,0 +1,14 @@
+# Bases adicionales de P7 (usuarios_db la crea el propio chart de Bitnami).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sa-platform-postgres-initdb
+  namespace: sa-p5
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+data:
+  init-databases.sql: |
+    CREATE DATABASE eventos_db;
+    CREATE DATABASE inscripciones_db;
+    CREATE DATABASE notificaciones_db;
+    CREATE DATABASE jobs_db;

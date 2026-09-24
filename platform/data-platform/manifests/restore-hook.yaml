@@ -1,0 +1,186 @@
+# Hook PreSync de ArgoCD: ANTES de crear PostgreSQL/RabbitMQ, recupera sus PVC
+# desde el último respaldo completado de Velero.
+#
+#   - Instalación inicial (no hay respaldos): no hace nada.
+#   - Clúster reconstruido tras un desastre: restaura PVC+PV desde el snapshot
+#     y los StatefulSet que ArgoCD crea a continuación se enlazan a esos
+#     volúmenes, con los datos reales.
+#   - Sincronizaciones normales (el PVC ya existe): sale de inmediato, sin
+#     tocar datos vivos.
+#
+# Esto es lo que hace que la restauración de datos NO sea un paso manual del
+# bootstrap (requisito: "no se admite ningún paso manual intermedio").
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dr-restore
+  namespace: velero
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dr-restore
+  namespace: velero
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+rules:
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "restores", "backupstoragelocations"]
+    verbs: ["get", "list", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dr-restore
+  namespace: velero
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+  - kind: ServiceAccount
+    name: dr-restore
+    namespace: velero
+roleRef:
+  kind: Role
+  name: dr-restore
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dr-restore-pvc-reader
+  namespace: sa-p5
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dr-restore-pvc-reader
+  namespace: sa-p5
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+  - kind: ServiceAccount
+    name: dr-restore
+    namespace: velero
+roleRef:
+  kind: Role
+  name: dr-restore-pvc-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dr-restore-data
+  namespace: velero
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1500
+  template:
+    spec:
+      serviceAccountName: dr-restore
+      restartPolicy: Never
+      containers:
+        - name: restore
+          # Cualquier imagen con kubectl + jq sirve. Verifica el tag: docker pull alpine/k8s:1.30.6
+          image: alpine/k8s:1.30.6
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              NS_APP=sa-p5
+              NS_VELERO=velero
+              SCHEDULE=eventosu-data
+              PVC=data-sa-platform-postgresql-0
+
+              echo "[dr-restore] $(date -u +%FT%TZ) inicio"
+
+              # 1) Datos vivos: nunca restaurar encima.
+              if kubectl -n "$NS_APP" get pvc "$PVC" >/dev/null 2>&1; then
+                echo "[dr-restore] el PVC $PVC ya existe -> nada que restaurar"
+                exit 0
+              fi
+
+              # 2) Esperar a que Velero vea el bucket.
+              echo "[dr-restore] esperando BackupStorageLocation Available..."
+              i=0
+              while [ $i -lt 90 ]; do
+                P=$(kubectl -n "$NS_VELERO" get backupstoragelocations.velero.io default \
+                      -o jsonpath='{.status.phase}' 2>/dev/null || true)
+                [ "$P" = "Available" ] && break
+                i=$((i+1)); sleep 5
+              done
+              [ "$P" = "Available" ] || { echo "[dr-restore] BSL no disponible"; exit 1; }
+
+              # 3) Esperar a que los Backup del bucket se sincronicen al clúster
+              #    (Velero sincroniza cada ~1 min). Sin respaldos tras 4 min =
+              #    instalación inicial.
+              echo "[dr-restore] buscando el último respaldo completado de '$SCHEDULE'..."
+              BK=""
+              i=0
+              while [ $i -lt 24 ]; do
+                BK=$(kubectl -n "$NS_VELERO" get backups.velero.io \
+                      -l velero.io/schedule-name="$SCHEDULE" -o json \
+                    | jq -r '[.items[] | select(.status.phase=="Completed")]
+                             | sort_by(.status.completionTimestamp) | last
+                             | .metadata.name // empty')
+                [ -n "$BK" ] && break
+                i=$((i+1)); sleep 10
+              done
+              if [ -z "$BK" ]; then
+                echo "[dr-restore] no hay respaldos -> instalación inicial, se omite"
+                exit 0
+              fi
+              echo "[dr-restore] último respaldo completado: $BK"
+
+              # 4) Restaurar SOLO los volúmenes (PVC+PV) de sa-p5.
+              RN="dr-restore-$(date -u +%Y%m%d%H%M%S)"
+              cat <<EOF | kubectl apply -f -
+              apiVersion: velero.io/v1
+              kind: Restore
+              metadata:
+                name: $RN
+                namespace: $NS_VELERO
+              spec:
+                backupName: $BK
+                includedNamespaces: [$NS_APP]
+                includedResources: [persistentvolumeclaims, persistentvolumes]
+                restorePVs: true
+              EOF
+
+              echo "[dr-restore] restore $RN creado, esperando..."
+              i=0
+              while [ $i -lt 120 ]; do
+                PH=$(kubectl -n "$NS_VELERO" get restores.velero.io "$RN" \
+                      -o jsonpath='{.status.phase}' 2>/dev/null || true)
+                case "$PH" in
+                  Completed) echo "[dr-restore] $(date -u +%FT%TZ) restauración COMPLETADA (backup $BK)"; exit 0;;
+                  Failed|PartiallyFailed|FailedValidation) echo "[dr-restore] restauración terminó en $PH"; exit 1;;
+                esac
+                i=$((i+1)); sleep 10
+              done
+              echo "[dr-restore] timeout esperando la restauración"; exit 1
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }

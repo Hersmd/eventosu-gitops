@@ -3,6 +3,8 @@ kind: ApplicationSet
 metadata:
   name: eventosu-services
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   generators:
     - matrix:
@@ -31,11 +33,11 @@ spec:
       project: eventosu
       sources:
         # Fuente 1: el chart de Helm, definido en el repo de CÓDIGO
-        # (P8/charts/<servicio>) — la plantilla no cambia con cada
+        # (P9/charts/<servicio>) — la plantilla no cambia con cada
         # deploy, solo con cambios de infraestructura del propio chart.
         - repoURL: https://github.com/hersmd/Practicas-SA-B-201704312.git
           targetRevision: main
-          path: "P8/charts/{{path.basename}}"
+          path: "P9/charts/{{path.basename}}"
           helm:
             valueFiles:
               - "values-{{env}}.yaml"
