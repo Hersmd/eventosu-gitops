@@ -3,6 +3,11 @@
 # versionado: esa era una parte del sistema imposible de reconstruir sin el
 # autor. Aquí todo es declarativo; las contraseñas viajan como SealedSecret.
 #
+# Bitnami retiró charts.bitnami.com (404 desde ago-2025) y migró todo a un
+# registro OCI: oci://registry-1.docker.io/bitnamicharts/<chart>. El patrón
+# "path: ." + repoURL con esquema oci:// es el que documenta ArgoCD para
+# fuentes OCI declarativas (no requiere registrar credenciales de repo).
+#
 # releaseName = nombre de la Application, y fullnameOverride en los values
 # conserva los nombres de servicio de P7 (sa-platform-postgresql /
 # sa-platform-rabbitmq) que los microservicios ya usan.
@@ -16,16 +21,18 @@ metadata:
 spec:
   project: platform
   sources:
-    - repoURL: https://charts.bitnami.com/bitnami
-      chart: postgresql
-      targetRevision: "16.*"
+    - repoURL: oci://registry-1.docker.io/bitnamicharts/postgresql
+      # Verifica que exista: helm show chart oci://registry-1.docker.io/bitnamicharts/postgresql --version 16.6.6
+      targetRevision: "16.6.6"
+      path: "."
       helm:
         releaseName: data-platform
         valueFiles:
           - $values/platform/data-platform/postgresql-values.yaml
-    - repoURL: https://charts.bitnami.com/bitnami
-      chart: rabbitmq
-      targetRevision: "15.*"
+    - repoURL: oci://registry-1.docker.io/bitnamicharts/rabbitmq
+      # Verifica que exista: helm show chart oci://registry-1.docker.io/bitnamicharts/rabbitmq --version 15.5.3
+      targetRevision: "15.5.3"
+      path: "."
       helm:
         releaseName: data-platform
         valueFiles:
