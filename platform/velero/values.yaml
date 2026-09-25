@@ -27,7 +27,7 @@ configuration:
     - name: default
       provider: gcp
       bucket: eventosu-p6-201704312-velero-backups
-      prefix: eventosu-cluster
+      prefix: eventosu-dr
       default: true
   volumeSnapshotLocation:
     - name: default
