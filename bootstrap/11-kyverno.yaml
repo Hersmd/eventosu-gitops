@@ -13,6 +13,21 @@ metadata:
     argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
 spec:
   project: platform
+  # Etiqueta residual del tracking antiguo (la puso un Update previo a SSA);
+  # Argo ya no la gestiona y provoca OutOfSync solo en los RBAC de Kyverno.
+  ignoreDifferences:
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      jsonPointers: ["/metadata/labels/argocd.argoproj.io~1instance"]
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      jsonPointers: ["/metadata/labels/argocd.argoproj.io~1instance"]
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      jsonPointers: ["/metadata/labels/argocd.argoproj.io~1instance"]
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      jsonPointers: ["/metadata/labels/argocd.argoproj.io~1instance"]
   source:
     repoURL: https://kyverno.github.io/kyverno/
     chart: kyverno
