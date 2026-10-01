@@ -16,7 +16,12 @@ spec:
     - https://argoproj.github.io/argo-helm
     - https://kyverno.github.io/kyverno/
     - https://vmware-tanzu.github.io/helm-charts
-    - https://charts.bitnami.com/bitnami
+    - https://bitnami.github.io/sealed-secrets
+    # Bitnami retiró charts.bitnami.com (ago-2025); PostgreSQL y RabbitMQ se
+    # leen ahora del registro OCI. ArgoCD exige un sourceRepo por cada
+    # repoURL exacto (no acepta un prefijo como oci://registry-1.docker.io/*).
+    - oci://registry-1.docker.io/bitnamicharts/postgresql
+    - oci://registry-1.docker.io/bitnamicharts/rabbitmq
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc

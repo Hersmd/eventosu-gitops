@@ -39,6 +39,13 @@ configuration:
 snapshotsEnabled: true
 deployNodeAgent: false
 
+# El init container "velero-upgrade-crds" usa docker.io/bitnami/kubectl:1.35,
+# que da ImagePullBackOff (mismo problema de tags de Bitnami que PostgreSQL/
+# RabbitMQ). Solo sirve para ACTUALIZAR CRDs de una instalación previa; en un
+# bootstrap de día cero los CRDs los instala el propio chart (carpeta crds/),
+# así que se desactiva en vez de perseguir otro tag de Bitnami que falle igual.
+upgradeCRDs: false
+
 # Calendario y retención (declarados, no manuales).
 schedules:
   eventosu-data:
