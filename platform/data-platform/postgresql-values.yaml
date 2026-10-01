@@ -30,6 +30,6 @@ primary:
   # recuperación (WAL replay) al restaurar el disco.
   podAnnotations:
     pre.hook.backup.velero.io/container: postgresql
-    pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "PGPASSWORD=\"$POSTGRES_POSTGRES_PASSWORD\" psql -U postgres -c CHECKPOINT"]'
+    pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "export PGPASSWORD=$(cat $POSTGRES_POSTGRES_PASSWORD_FILE); psql -U postgres -c CHECKPOINT"]'
     pre.hook.backup.velero.io/on-error: Continue
     pre.hook.backup.velero.io/timeout: 60s
