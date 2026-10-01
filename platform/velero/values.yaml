@@ -29,6 +29,12 @@ configuration:
       bucket: eventosu-p6-201704312-velero-backups
       prefix: eventosu-dr
       default: true
+      # Con Workload Identity (sin Secret de credenciales) el plugin de GCP
+      # exige la cuenta de servicio como un ITEM de config, no solo via la
+      # anotación del ServiceAccount de Kubernetes. Sin esto: "serviceAccount
+      # is expected to be provided as an item in BackupStorageLocation's config".
+      config:
+        serviceAccount: velero-dr@eventosu-p6-201704312.iam.gserviceaccount.com
   volumeSnapshotLocation:
     - name: default
       provider: gcp
