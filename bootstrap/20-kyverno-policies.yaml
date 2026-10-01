@@ -10,6 +10,19 @@ metadata:
     argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
 spec:
   project: platform
+  # Kyverno rellena estos defaults al admitir cada ClusterPolicy; no estan en Git.
+  ignoreDifferences:
+    - group: kyverno.io
+      kind: ClusterPolicy
+      jqPathExpressions:
+        - .spec.admission
+        - .spec.emitWarning
+        - .spec.rules[]?.skipBackgroundRequests
+        - .spec.rules[]?.validate?.allowExistingViolations
+        - .spec.rules[]?.verifyImages[]?.mutateDigest
+        - .spec.rules[]?.verifyImages[]?.verifyDigest
+        - .spec.rules[]?.verifyImages[]?.required
+        - .spec.rules[]?.verifyImages[]?.useCache
   source:
     repoURL: https://github.com/hersmd/Practicas-SA-B-201704312.git
     targetRevision: main
