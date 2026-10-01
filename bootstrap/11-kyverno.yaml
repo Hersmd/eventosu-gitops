@@ -5,6 +5,12 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "0"
+    # Recomendación oficial de Kyverno para ArgoCD (kyverno.io/docs/installation/
+    # platform-notes): ServerSideApply=true evita la anotación gigante al APLICAR,
+    # pero sin esto el paso de COMPARAR seguía generando un JSON de >256KB para
+    # las 3 CRDs más grandes (clusterpolicies, policies, mutatingpolicies) y el
+    # sync fallaba igual con "metadata.annotations: Too long".
+    argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
 spec:
   project: platform
   source:
