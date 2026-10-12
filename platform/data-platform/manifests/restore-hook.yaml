@@ -111,7 +111,7 @@ spec:
               set -eu
               NS_APP=sa-p5
               NS_VELERO=velero
-              SCHEDULE=eventosu-data
+              SCHEDULE=velero-eventosu-data
               PVC=data-sa-platform-postgresql-0
 
               echo "[dr-restore] $(date -u +%FT%TZ) inicio"
