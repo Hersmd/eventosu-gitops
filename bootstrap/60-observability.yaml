@@ -180,6 +180,9 @@ spec:
       valuesObject:
         fullnameOverride: otel-collector
         mode: daemonset
+        # DaemonSet desactiva el Service por defecto; los SDK lo necesitan para OTLP.
+        service:
+          enabled: true
         image:
           repository: otel/opentelemetry-collector-contrib
         command: {name: otelcol-contrib}
