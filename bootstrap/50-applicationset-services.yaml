@@ -33,11 +33,11 @@ spec:
       project: eventosu
       sources:
         # Fuente 1: el chart de Helm, definido en el repo de CÓDIGO
-        # (P9/charts/<servicio>) — la plantilla no cambia con cada
+        # (P10/charts/<servicio>) — la plantilla no cambia con cada
         # deploy, solo con cambios de infraestructura del propio chart.
         - repoURL: https://github.com/hersmd/Practicas-SA-B-201704312.git
           targetRevision: main
-          path: "P9/charts/{{path.basename}}"
+          path: "P10/charts/{{path.basename}}"
           helm:
             valueFiles:
               - "values-{{env}}.yaml"
@@ -47,7 +47,8 @@ spec:
         # que el pipeline toca automáticamente (image.yaml, vía PR).
         - repoURL: https://github.com/hersmd/eventosu-gitops.git
           targetRevision: main
-          path: "apps/{{path.basename}}"
+          # Fuente de values exclusivamente: no especificar path, o Argo CD
+          # intenta renderizar image.yaml como manifiesto Kubernetes.
           ref: values
         # Fuente 3: el SealedSecret de ESE ambiente, aplicado como
         # manifiesto crudo (no es un value de Helm) — kubeseal ya
