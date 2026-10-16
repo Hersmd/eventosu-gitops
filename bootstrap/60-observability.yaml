@@ -150,6 +150,7 @@ spec:
         chunksCache: {enabled: false}
         resultsCache: {enabled: false}
         lokiCanary: {enabled: false}
+        test: {enabled: false} # Sin test Helm, porque lokiCanary esta deshabilitado
         gateway: {enabled: true}
         read: {replicas: 0}
         write: {replicas: 0}
