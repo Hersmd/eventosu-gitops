@@ -144,6 +144,13 @@ spec:
         singleBinary:
           replicas: 1
           persistence: {enabled: false}
+          # Volumen efimero escribible para Loki con rootfs de solo lectura.
+          extraVolumes:
+            - name: loki-writable
+              emptyDir: {}
+          extraVolumeMounts:
+            - name: loki-writable
+              mountPath: /var/loki
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: 500m, memory: 768Mi}
