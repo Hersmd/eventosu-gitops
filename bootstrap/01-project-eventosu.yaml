@@ -33,3 +33,5 @@ spec:
       kind: "*"
     - group: bitnami.com
       kind: SealedSecret
+    - group: networking.k8s.io
+      kind: NetworkPolicy
