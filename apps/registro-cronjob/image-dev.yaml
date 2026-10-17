@@ -1,6 +1,6 @@
 env: dev
 namespace: sa-p5-dev
-chartRevision: 9fd381411dff3339cf0e17ddc2d41a03a6e1326a
+chartRevision: 2c3af455123ea3dbd9a4a33ccd5815ef50636d6f
 image:
   tag: 1.0.13
 component: registro-cronjob
