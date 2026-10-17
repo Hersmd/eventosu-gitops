@@ -1,6 +1,6 @@
 env: dev
 namespace: sa-p5-dev
-chartRevision: 9fd381411dff3339cf0e17ddc2d41a03a6e1326a
+chartRevision: 237af657a64857435f9e62009c61c0e7035d5b5b
 image:
   tag: 1.0.13
 component: gateway
